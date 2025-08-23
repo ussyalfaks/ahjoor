@@ -8,7 +8,7 @@ pub mod interfaces {
 
 pub mod contracts {
     pub mod ahjoor_rosca;
-    pub mod mock_usdc;
+    pub mod mock_strk;
 }
 
 pub mod structs {

@@ -6,29 +6,29 @@ use snforge_std::{
 use ahjoor_::{IAhjoorROSCADispatcher, IAhjoorROSCADispatcherTrait};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 
-// Custom interface for MockUSDC with mint function
+// Custom interface for MockSTRK with mint function
 #[starknet::interface]
-trait IMockUSDC<TContractState> {
+trait IMockSTRK<TContractState> {
     fn mint(ref self: TContractState, recipient: ContractAddress, amount: u256);
 }
 
-fn setup_test_contracts() -> (IAhjoorROSCADispatcher, IMockUSDCDispatcher, ContractAddress, ContractAddress, ContractAddress, ContractAddress) {
+fn setup_test_contracts() -> (IAhjoorROSCADispatcher, IMockSTRKDispatcher, ContractAddress, ContractAddress, ContractAddress, ContractAddress) {
     let owner: ContractAddress = 0x999.try_into().unwrap();
     let organizer: ContractAddress = 0x123.try_into().unwrap();
     let participant1: ContractAddress = 0x456.try_into().unwrap();
     let participant2: ContractAddress = 0x789.try_into().unwrap();
     
-    // Deploy mock USDC
-    let usdc_class = declare("MockUSDC").unwrap().contract_class();
-    let (usdc_address, _) = usdc_class.deploy(@array![]).unwrap();
-    let usdc_mint = IMockUSDCDispatcher { contract_address: usdc_address };
+    // Deploy mock STARK
+    let strk_class = declare("MockSTRK").unwrap().contract_class();
+    let (strk_address, _) = strk_class.deploy(@array![]).unwrap();
+    let strk_mint = IMockSTRKDispatcher { contract_address: strk_address };
     
     // Deploy Ahjoor ROSCA
     let ahjoor_class = declare("AhjoorROSCA").unwrap().contract_class();
-    let (ahjoor_address, _) = ahjoor_class.deploy(@array![usdc_address.into(), owner.into()]).unwrap();
+    let (ahjoor_address, _) = ahjoor_class.deploy(@array![strk_address.into(), owner.into()]).unwrap();
     let ahjoor = IAhjoorROSCADispatcher { contract_address: ahjoor_address };
     
-    (ahjoor, usdc_mint, owner, organizer, participant1, participant2)
+    (ahjoor, strk_mint, owner, organizer, participant1, participant2)
 }
 
 // Test 1: GroupCreated event functionality ✅
@@ -61,7 +61,7 @@ fn test_group_created_event_functionality() {
 // Test 2: ContributionMade event functionality ✅
 #[test]
 fn test_contribution_made_event_functionality() {
-    let (ahjoor, usdc_mint, _, organizer, participant1, participant2) = setup_test_contracts();
+    let (ahjoor, strk_mint, _, organizer, participant1, participant2) = setup_test_contracts();
     
     // Create group first
     start_cheat_caller_address(ahjoor.contract_address, organizer);
@@ -69,12 +69,12 @@ fn test_contribution_made_event_functionality() {
     let group_id = ahjoor.create_group("Test Group", "Test", 3, 1000_u256, 86400_u64, participants);
     stop_cheat_caller_address(ahjoor.contract_address);
     
-    // Setup USDC for contribution
-    usdc_mint.mint(organizer, 5000_u256);
-    let usdc = IERC20Dispatcher { contract_address: usdc_mint.contract_address };
-    start_cheat_caller_address(usdc.contract_address, organizer);
-    usdc.approve(ahjoor.contract_address, 1000_u256);
-    stop_cheat_caller_address(usdc.contract_address);
+    // Setup STARK for contribution
+    strk_mint.mint(organizer, 5000_u256);
+    let strk = IERC20Dispatcher { contract_address: strk_mint.contract_address };
+    start_cheat_caller_address(strk.contract_address, organizer);
+    strk.approve(ahjoor.contract_address, 1000_u256);
+    stop_cheat_caller_address(strk.contract_address);
     
     // Make contribution (would emit ContributionMade event)
     start_cheat_caller_address(ahjoor.contract_address, organizer);
@@ -82,16 +82,16 @@ fn test_contribution_made_event_functionality() {
     stop_cheat_caller_address(ahjoor.contract_address);
     
     // Verify contribution was successful
-    let organizer_balance = usdc.balance_of(organizer);
-    assert(organizer_balance == 4000_u256, 'USDC deducted correctly');
-    let contract_balance = usdc.balance_of(ahjoor.contract_address);
-    assert(contract_balance == 1000_u256, 'Contract received USDC');
+    let organizer_balance = strk.balance_of(organizer);
+    assert(organizer_balance == 4000_u256, 'STARK deducted correctly');
+    let contract_balance = strk.balance_of(ahjoor.contract_address);
+    assert(contract_balance == 1000_u256, 'Contract received STARK');
 }
 
 // Test 3: PayoutClaimed event functionality ✅
 #[test]
 fn test_payout_claimed_event_functionality() {
-    let (ahjoor, usdc_mint, _, organizer, participant1, participant2) = setup_test_contracts();
+    let (ahjoor, strk_mint, _, organizer, participant1, participant2) = setup_test_contracts();
     
     // Create group and setup complete contribution cycle
     start_cheat_caller_address(ahjoor.contract_address, organizer);
@@ -99,25 +99,25 @@ fn test_payout_claimed_event_functionality() {
     let group_id = ahjoor.create_group("Test Group", "Test", 3, 1000_u256, 86400_u64, participants);
     stop_cheat_caller_address(ahjoor.contract_address);
     
-    // Setup USDC for all participants
-    usdc_mint.mint(organizer, 5000_u256);
-    usdc_mint.mint(participant1, 5000_u256);
-    usdc_mint.mint(participant2, 5000_u256);
+    // Setup STARK for all participants
+    strk_mint.mint(organizer, 5000_u256);
+    strk_mint.mint(participant1, 5000_u256);
+    strk_mint.mint(participant2, 5000_u256);
     
-    let usdc = IERC20Dispatcher { contract_address: usdc_mint.contract_address };
+    let strk = IERC20Dispatcher { contract_address: strk_mint.contract_address };
     
     // All approve and contribute
-    start_cheat_caller_address(usdc.contract_address, organizer);
-    usdc.approve(ahjoor.contract_address, 1000_u256);
-    stop_cheat_caller_address(usdc.contract_address);
+    start_cheat_caller_address(strk.contract_address, organizer);
+    strk.approve(ahjoor.contract_address, 1000_u256);
+    stop_cheat_caller_address(strk.contract_address);
     
-    start_cheat_caller_address(usdc.contract_address, participant1);
-    usdc.approve(ahjoor.contract_address, 1000_u256);
-    stop_cheat_caller_address(usdc.contract_address);
+    start_cheat_caller_address(strk.contract_address, participant1);
+    strk.approve(ahjoor.contract_address, 1000_u256);
+    stop_cheat_caller_address(strk.contract_address);
     
-    start_cheat_caller_address(usdc.contract_address, participant2);
-    usdc.approve(ahjoor.contract_address, 1000_u256);
-    stop_cheat_caller_address(usdc.contract_address);
+    start_cheat_caller_address(strk.contract_address, participant2);
+    strk.approve(ahjoor.contract_address, 1000_u256);
+    stop_cheat_caller_address(strk.contract_address);
     
     // All contribute
     start_cheat_caller_address(ahjoor.contract_address, organizer);
@@ -133,14 +133,14 @@ fn test_payout_claimed_event_functionality() {
     stop_cheat_caller_address(ahjoor.contract_address);
     
     // Organizer claims payout (would emit PayoutClaimed event)
-    let organizer_balance_before = usdc.balance_of(organizer);
+    let organizer_balance_before = strk.balance_of(organizer);
     
     start_cheat_caller_address(ahjoor.contract_address, organizer);
     ahjoor.claim_payout(group_id);
     stop_cheat_caller_address(ahjoor.contract_address);
     
     // Verify payout was successful
-    let organizer_balance_after = usdc.balance_of(organizer);
+    let organizer_balance_after = strk.balance_of(organizer);
     assert(organizer_balance_after == organizer_balance_before + 3000_u256, 'Payout received');
     
     // Verify group advanced to next round
@@ -223,13 +223,13 @@ fn test_upgraded_event_functionality() {
 fn test_constructor_event_functionality() {
     let owner: ContractAddress = 0x777.try_into().unwrap();
     
-    // Deploy mock USDC
-    let usdc_class = declare("MockUSDC").unwrap().contract_class();
-    let (usdc_address, _) = usdc_class.deploy(@array![]).unwrap();
+    // Deploy mock STARK
+    let strk_class = declare("MockSTRK").unwrap().contract_class();
+    let (strk_address, _) = strk_class.deploy(@array![]).unwrap();
     
     // Deploy Ahjoor ROSCA (would emit OwnershipTransferred in constructor)
     let ahjoor_class = declare("AhjoorROSCA").unwrap().contract_class();
-    let (ahjoor_address, _) = ahjoor_class.deploy(@array![usdc_address.into(), owner.into()]).unwrap();
+    let (ahjoor_address, _) = ahjoor_class.deploy(@array![strk_address.into(), owner.into()]).unwrap();
     let ahjoor = IAhjoorROSCADispatcher { contract_address: ahjoor_address };
     
     // Verify owner was set correctly (proving constructor event logic works)

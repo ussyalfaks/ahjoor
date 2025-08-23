@@ -18,21 +18,21 @@ fn setup_addresses() -> (ContractAddress, ContractAddress, ContractAddress, Cont
 fn deploy_enhanced_contracts() -> (IAhjoorROSCADispatcher, ContractAddress, ContractAddress) {
     let (owner, _, _, _) = setup_addresses();
     
-    // Deploy mock USDC (using existing MockUSDC)
-    let usdc_class = declare("MockUSDC").unwrap().contract_class();
-    let (usdc_address, _) = usdc_class.deploy(@array![]).unwrap();
+    // Deploy mock STARK (using existing MockSTRK)
+    let strk_class = declare("MockSTRK").unwrap().contract_class();
+    let (strk_address, _) = strk_class.deploy(@array![]).unwrap();
     
     // Deploy enhanced Ahjoor ROSCA with owner parameter
     let ahjoor_class = declare("AhjoorROSCA").unwrap().contract_class();
-    let (ahjoor_address, _) = ahjoor_class.deploy(@array![usdc_address.into(), owner.into()]).unwrap();
+    let (ahjoor_address, _) = ahjoor_class.deploy(@array![strk_address.into(), owner.into()]).unwrap();
     
-    (IAhjoorROSCADispatcher { contract_address: ahjoor_address }, usdc_address, owner)
+    (IAhjoorROSCADispatcher { contract_address: ahjoor_address }, strk_address, owner)
 }
 
 // Test 1: Enhanced contract deployment with owner
 #[test]
 fn test_enhanced_contract_deployment() {
-    let (ahjoor, _usdc_address, owner) = deploy_enhanced_contracts();
+    let (ahjoor, _strk_address, owner) = deploy_enhanced_contracts();
     
     // Verify owner is set correctly
     let contract_owner = ahjoor.owner();
@@ -48,7 +48,7 @@ fn test_enhanced_contract_deployment() {
 // Test 2: Pausable functionality
 #[test]
 fn test_pausable_functionality() {
-    let (ahjoor, _usdc_address, owner) = deploy_enhanced_contracts();
+    let (ahjoor, _strk_address, owner) = deploy_enhanced_contracts();
     let (_, organizer, participant1, participant2) = setup_addresses();
     
     // Owner can pause the contract
@@ -80,7 +80,7 @@ fn test_pausable_functionality() {
 #[test]
 #[should_panic(expected: ('Pausable: paused',))]
 fn test_create_group_fails_when_paused() {
-    let (ahjoor, _usdc_address, owner) = deploy_enhanced_contracts();
+    let (ahjoor, _strk_address, owner) = deploy_enhanced_contracts();
     let (_, organizer, participant1, participant2) = setup_addresses();
     
     // Pause the contract
@@ -99,7 +99,7 @@ fn test_create_group_fails_when_paused() {
 #[test]
 #[should_panic(expected: ('Pausable: paused',))]
 fn test_contribute_fails_when_paused() {
-    let (ahjoor, _usdc_address, owner) = deploy_enhanced_contracts();
+    let (ahjoor, _strk_address, owner) = deploy_enhanced_contracts();
     let (_, organizer, participant1, participant2) = setup_addresses();
     
     // Create group first (while unpaused)
@@ -124,7 +124,7 @@ fn test_contribute_fails_when_paused() {
 #[test]
 #[should_panic(expected: ('Ownable: caller not owner',))]
 fn test_non_owner_cannot_pause() {
-    let (ahjoor, _usdc_address, _owner) = deploy_enhanced_contracts();
+    let (ahjoor, _strk_address, _owner) = deploy_enhanced_contracts();
     let (_, organizer, _, _) = setup_addresses();
     
     // Non-owner tries to pause
@@ -135,7 +135,7 @@ fn test_non_owner_cannot_pause() {
 #[test]
 #[should_panic(expected: ('Ownable: caller not owner',))]
 fn test_non_owner_cannot_unpause() {
-    let (ahjoor, _usdc_address, owner) = deploy_enhanced_contracts();
+    let (ahjoor, _strk_address, owner) = deploy_enhanced_contracts();
     let (_, organizer, _, _) = setup_addresses();
     
     // Owner pauses first
@@ -151,7 +151,7 @@ fn test_non_owner_cannot_unpause() {
 // Test 4: Enhanced group creation still works
 #[test]
 fn test_enhanced_group_creation() {
-    let (ahjoor, _usdc_address, _owner) = deploy_enhanced_contracts();
+    let (ahjoor, _strk_address, _owner) = deploy_enhanced_contracts();
     let (_, organizer, participant1, participant2) = setup_addresses();
     
     start_cheat_caller_address(ahjoor.contract_address, organizer);
@@ -191,7 +191,7 @@ fn test_enhanced_group_creation() {
 // Test 5: Enhanced contract maintains all original ROSCA functionality
 #[test]
 fn test_original_rosca_functionality_preserved() {
-    let (ahjoor, _usdc_address, _owner) = deploy_enhanced_contracts();
+    let (ahjoor, _strk_address, _owner) = deploy_enhanced_contracts();
     let (_, organizer, participant1, participant2) = setup_addresses();
     
     // Test group creation validation still works
@@ -222,7 +222,7 @@ fn test_original_rosca_functionality_preserved() {
 // Test 6: Multiple groups with enhanced features
 #[test]
 fn test_multiple_groups_with_enhanced_features() {
-    let (ahjoor, _usdc_address, owner) = deploy_enhanced_contracts();
+    let (ahjoor, _strk_address, owner) = deploy_enhanced_contracts();
     let (_, organizer, participant1, participant2) = setup_addresses();
     
     start_cheat_caller_address(ahjoor.contract_address, organizer);
@@ -298,7 +298,7 @@ fn test_non_owner_cannot_upgrade() {
 // Test 8: Event emission for enhanced features
 #[test]
 fn test_enhanced_events() {
-    let (ahjoor, _usdc_address, owner) = deploy_enhanced_contracts();
+    let (ahjoor, _strk_address, owner) = deploy_enhanced_contracts();
     
     // Test pause/unpause events (we can't directly test events in this framework,
     // but the functions should execute without error)

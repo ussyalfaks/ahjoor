@@ -54,7 +54,7 @@ fn test_strk_contribution_basic_flow() {
 fn test_contribution_fails_without_strk() {
     // Deploy contracts
     let owner: ContractAddress = 0x999.try_into().unwrap();
-    let organizer: ContractAddress = 0x999.try_into().unwrap();
+    let organizer: ContractAddress = 0x123.try_into().unwrap();
     let participant1: ContractAddress = 0x456.try_into().unwrap();
     let participant2: ContractAddress = 0x789.try_into().unwrap();
     

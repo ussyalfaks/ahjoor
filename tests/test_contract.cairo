@@ -2,9 +2,9 @@ use starknet::ContractAddress;
 use snforge_std::{declare, ContractClassTrait, DeclareResultTrait, start_cheat_caller_address, stop_cheat_caller_address};
 use ahjoor_::{IAhjoorROSCADispatcher, IAhjoorROSCADispatcherTrait};
 
-// Mock USDC for testing
+// Mock STARK for testing
 #[starknet::contract]
-mod MockUSDC {
+mod MockSTRK {
     use starknet::{ContractAddress, get_caller_address};
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
 
@@ -69,16 +69,16 @@ mod MockUSDC {
 }
 
 fn deploy_contracts() -> (IAhjoorROSCADispatcher, ContractAddress) {
-    // Deploy mock USDC
-    let usdc_class = declare("MockUSDC").unwrap().contract_class();
-    let (usdc_address, _) = usdc_class.deploy(@array![]).unwrap();
+    // Deploy mock STARK
+    let strk_class = declare("MockSTRK").unwrap().contract_class();
+    let (strk_address, _) = strk_class.deploy(@array![]).unwrap();
     
     // Deploy Ahjoor ROSCA with owner parameter
     let owner: ContractAddress = 0x999.try_into().unwrap();
     let ahjoor_class = declare("AhjoorROSCA").unwrap().contract_class();
-    let (ahjoor_address, _) = ahjoor_class.deploy(@array![usdc_address.into(), owner.into()]).unwrap();
+    let (ahjoor_address, _) = ahjoor_class.deploy(@array![strk_address.into(), owner.into()]).unwrap();
     
-    (IAhjoorROSCADispatcher { contract_address: ahjoor_address }, usdc_address)
+    (IAhjoorROSCADispatcher { contract_address: ahjoor_address }, strk_address)
 }
 
 #[test]

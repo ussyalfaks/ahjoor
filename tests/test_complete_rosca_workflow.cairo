@@ -6,17 +6,17 @@ use snforge_std::{
 use ahjoor_::{IAhjoorROSCADispatcher, IAhjoorROSCADispatcherTrait};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 
-// Custom interface for MockUSDC with mint function
+// Custom interface for MockSTRK with mint function
 #[starknet::interface]
-trait IMockUSDC<TContractState> {
+trait IMockSTRK<TContractState> {
     fn mint(ref self: TContractState, recipient: ContractAddress, amount: u256);
 }
 
 #[derive(Drop)]
 struct TestSetup {
     ahjoor: IAhjoorROSCADispatcher,
-    usdc: IERC20Dispatcher,
-    usdc_mint: IMockUSDCDispatcher,
+    strk: IERC20Dispatcher,
+    strk_mint: IMockSTRKDispatcher,
     owner: ContractAddress,
     organizer: ContractAddress,
     participant1: ContractAddress,
@@ -30,15 +30,15 @@ fn setup_complete_test() -> TestSetup {
     let participant1: ContractAddress = 0x456.try_into().unwrap();
     let participant2: ContractAddress = 0x789.try_into().unwrap();
     
-    // Deploy mock USDC with OpenZeppelin
-    let usdc_class = declare("MockUSDC").unwrap().contract_class();
-    let (usdc_address, _) = usdc_class.deploy(@array![]).unwrap();
-    let usdc = IERC20Dispatcher { contract_address: usdc_address };
-    let usdc_mint = IMockUSDCDispatcher { contract_address: usdc_address };
+    // Deploy mock STARK with OpenZeppelin
+    let strk_class = declare("MockSTRK").unwrap().contract_class();
+    let (strk_address, _) = strk_class.deploy(@array![]).unwrap();
+    let strk = IERC20Dispatcher { contract_address: strk_address };
+    let strk_mint = IMockSTRKDispatcher { contract_address: strk_address };
     
     // Deploy Ahjoor ROSCA
     let ahjoor_class = declare("AhjoorROSCA").unwrap().contract_class();
-    let (ahjoor_address, _) = ahjoor_class.deploy(@array![usdc_address.into(), owner.into()]).unwrap();
+    let (ahjoor_address, _) = ahjoor_class.deploy(@array![strk_address.into(), owner.into()]).unwrap();
     let ahjoor = IAhjoorROSCADispatcher { contract_address: ahjoor_address };
     
     // Create group
@@ -55,7 +55,7 @@ fn setup_complete_test() -> TestSetup {
     stop_cheat_caller_address(ahjoor.contract_address);
     
     TestSetup {
-        ahjoor, usdc, usdc_mint, owner, organizer, participant1, participant2, group_id
+        ahjoor, strk, strk_mint, owner, organizer, participant1, participant2, group_id
     }
 }
 
@@ -97,23 +97,23 @@ fn test_payout_order_correctness() {
     let mut setup = setup_complete_test();
     let contribution_amount = 1000_u256;
     
-    // Setup USDC for all participants
-    setup.usdc_mint.mint(setup.organizer, 5000_u256);
-    setup.usdc_mint.mint(setup.participant1, 5000_u256);
-    setup.usdc_mint.mint(setup.participant2, 5000_u256);
+    // Setup STARK for all participants
+    setup.strk_mint.mint(setup.organizer, 5000_u256);
+    setup.strk_mint.mint(setup.participant1, 5000_u256);
+    setup.strk_mint.mint(setup.participant2, 5000_u256);
     
     // All participants approve contract
-    start_cheat_caller_address(setup.usdc.contract_address, setup.organizer);
-    setup.usdc.approve(setup.ahjoor.contract_address, contribution_amount);
-    stop_cheat_caller_address(setup.usdc.contract_address);
+    start_cheat_caller_address(setup.strk.contract_address, setup.organizer);
+    setup.strk.approve(setup.ahjoor.contract_address, contribution_amount);
+    stop_cheat_caller_address(setup.strk.contract_address);
     
-    start_cheat_caller_address(setup.usdc.contract_address, setup.participant1);
-    setup.usdc.approve(setup.ahjoor.contract_address, contribution_amount);
-    stop_cheat_caller_address(setup.usdc.contract_address);
+    start_cheat_caller_address(setup.strk.contract_address, setup.participant1);
+    setup.strk.approve(setup.ahjoor.contract_address, contribution_amount);
+    stop_cheat_caller_address(setup.strk.contract_address);
     
-    start_cheat_caller_address(setup.usdc.contract_address, setup.participant2);
-    setup.usdc.approve(setup.ahjoor.contract_address, contribution_amount);
-    stop_cheat_caller_address(setup.usdc.contract_address);
+    start_cheat_caller_address(setup.strk.contract_address, setup.participant2);
+    setup.strk.approve(setup.ahjoor.contract_address, contribution_amount);
+    stop_cheat_caller_address(setup.strk.contract_address);
     
     // All participants contribute for round 1
     start_cheat_caller_address(setup.ahjoor.contract_address, setup.organizer);
@@ -129,14 +129,14 @@ fn test_payout_order_correctness() {
     stop_cheat_caller_address(setup.ahjoor.contract_address);
     
     // First payout should go to organizer (index 0)
-    let organizer_balance_before = setup.usdc.balance_of(setup.organizer);
+    let organizer_balance_before = setup.strk.balance_of(setup.organizer);
     
     start_cheat_caller_address(setup.ahjoor.contract_address, setup.organizer);
     setup.ahjoor.claim_payout(setup.group_id);
     stop_cheat_caller_address(setup.ahjoor.contract_address);
     
-    let organizer_balance_after = setup.usdc.balance_of(setup.organizer);
-    let expected_payout = contribution_amount * 3; // 3000 USDC total pool
+    let organizer_balance_after = setup.strk.balance_of(setup.organizer);
+    let expected_payout = contribution_amount * 3; // 3000 STARK total pool
     
     assert(organizer_balance_after == organizer_balance_before + expected_payout, 'Organizer got correct payout');
 }
@@ -149,22 +149,22 @@ fn test_organizer_cannot_withdraw_out_of_turn() {
     let contribution_amount = 1000_u256;
     
     // Setup and complete round 1
-    setup.usdc_mint.mint(setup.organizer, 5000_u256);
-    setup.usdc_mint.mint(setup.participant1, 5000_u256);
-    setup.usdc_mint.mint(setup.participant2, 5000_u256);
+    setup.strk_mint.mint(setup.organizer, 5000_u256);
+    setup.strk_mint.mint(setup.participant1, 5000_u256);
+    setup.strk_mint.mint(setup.participant2, 5000_u256);
     
     // All approve and contribute
-    start_cheat_caller_address(setup.usdc.contract_address, setup.organizer);
-    setup.usdc.approve(setup.ahjoor.contract_address, contribution_amount * 2);
-    stop_cheat_caller_address(setup.usdc.contract_address);
+    start_cheat_caller_address(setup.strk.contract_address, setup.organizer);
+    setup.strk.approve(setup.ahjoor.contract_address, contribution_amount * 2);
+    stop_cheat_caller_address(setup.strk.contract_address);
     
-    start_cheat_caller_address(setup.usdc.contract_address, setup.participant1);
-    setup.usdc.approve(setup.ahjoor.contract_address, contribution_amount * 2);
-    stop_cheat_caller_address(setup.usdc.contract_address);
+    start_cheat_caller_address(setup.strk.contract_address, setup.participant1);
+    setup.strk.approve(setup.ahjoor.contract_address, contribution_amount * 2);
+    stop_cheat_caller_address(setup.strk.contract_address);
     
-    start_cheat_caller_address(setup.usdc.contract_address, setup.participant2);
-    setup.usdc.approve(setup.ahjoor.contract_address, contribution_amount * 2);
-    stop_cheat_caller_address(setup.usdc.contract_address);
+    start_cheat_caller_address(setup.strk.contract_address, setup.participant2);
+    setup.strk.approve(setup.ahjoor.contract_address, contribution_amount * 2);
+    stop_cheat_caller_address(setup.strk.contract_address);
     
     // Round 1 contributions
     start_cheat_caller_address(setup.ahjoor.contract_address, setup.organizer);
@@ -210,23 +210,23 @@ fn test_contribute_after_completion_fails() {
     let mut setup = setup_complete_test();
     let contribution_amount = 1000_u256;
     
-    // Setup USDC for 3 full rounds
-    setup.usdc_mint.mint(setup.organizer, 10000_u256);
-    setup.usdc_mint.mint(setup.participant1, 10000_u256);
-    setup.usdc_mint.mint(setup.participant2, 10000_u256);
+    // Setup STARK for 3 full rounds
+    setup.strk_mint.mint(setup.organizer, 10000_u256);
+    setup.strk_mint.mint(setup.participant1, 10000_u256);
+    setup.strk_mint.mint(setup.participant2, 10000_u256);
     
     // All participants approve for 3 rounds
-    start_cheat_caller_address(setup.usdc.contract_address, setup.organizer);
-    setup.usdc.approve(setup.ahjoor.contract_address, contribution_amount * 3);
-    stop_cheat_caller_address(setup.usdc.contract_address);
+    start_cheat_caller_address(setup.strk.contract_address, setup.organizer);
+    setup.strk.approve(setup.ahjoor.contract_address, contribution_amount * 3);
+    stop_cheat_caller_address(setup.strk.contract_address);
     
-    start_cheat_caller_address(setup.usdc.contract_address, setup.participant1);
-    setup.usdc.approve(setup.ahjoor.contract_address, contribution_amount * 3);
-    stop_cheat_caller_address(setup.usdc.contract_address);
+    start_cheat_caller_address(setup.strk.contract_address, setup.participant1);
+    setup.strk.approve(setup.ahjoor.contract_address, contribution_amount * 3);
+    stop_cheat_caller_address(setup.strk.contract_address);
     
-    start_cheat_caller_address(setup.usdc.contract_address, setup.participant2);
-    setup.usdc.approve(setup.ahjoor.contract_address, contribution_amount * 3);
-    stop_cheat_caller_address(setup.usdc.contract_address);
+    start_cheat_caller_address(setup.strk.contract_address, setup.participant2);
+    setup.strk.approve(setup.ahjoor.contract_address, contribution_amount * 3);
+    stop_cheat_caller_address(setup.strk.contract_address);
     
     // Complete all 3 rounds
     let mut round: u32 = 1;
@@ -279,23 +279,23 @@ fn test_group_marked_completed_after_last_payout() {
     let mut setup = setup_complete_test();
     let contribution_amount = 1000_u256;
     
-    // Setup USDC for 3 full rounds
-    setup.usdc_mint.mint(setup.organizer, 10000_u256);
-    setup.usdc_mint.mint(setup.participant1, 10000_u256);
-    setup.usdc_mint.mint(setup.participant2, 10000_u256);
+    // Setup STARK for 3 full rounds
+    setup.strk_mint.mint(setup.organizer, 10000_u256);
+    setup.strk_mint.mint(setup.participant1, 10000_u256);
+    setup.strk_mint.mint(setup.participant2, 10000_u256);
     
     // All participants approve for 3 rounds
-    start_cheat_caller_address(setup.usdc.contract_address, setup.organizer);
-    setup.usdc.approve(setup.ahjoor.contract_address, contribution_amount * 3);
-    stop_cheat_caller_address(setup.usdc.contract_address);
+    start_cheat_caller_address(setup.strk.contract_address, setup.organizer);
+    setup.strk.approve(setup.ahjoor.contract_address, contribution_amount * 3);
+    stop_cheat_caller_address(setup.strk.contract_address);
     
-    start_cheat_caller_address(setup.usdc.contract_address, setup.participant1);
-    setup.usdc.approve(setup.ahjoor.contract_address, contribution_amount * 3);
-    stop_cheat_caller_address(setup.usdc.contract_address);
+    start_cheat_caller_address(setup.strk.contract_address, setup.participant1);
+    setup.strk.approve(setup.ahjoor.contract_address, contribution_amount * 3);
+    stop_cheat_caller_address(setup.strk.contract_address);
     
-    start_cheat_caller_address(setup.usdc.contract_address, setup.participant2);
-    setup.usdc.approve(setup.ahjoor.contract_address, contribution_amount * 3);
-    stop_cheat_caller_address(setup.usdc.contract_address);
+    start_cheat_caller_address(setup.strk.contract_address, setup.participant2);
+    setup.strk.approve(setup.ahjoor.contract_address, contribution_amount * 3);
+    stop_cheat_caller_address(setup.strk.contract_address);
     
     // Complete round 1 and 2, verify not completed yet
     let mut round: u32 = 1;

@@ -1,6 +1,6 @@
 # Ahjoor - Decentralized ROSCA Smart Contract
 
-Ahjoor is a Cairo smart contract implementing a Rotating Savings and Credit Association (ROSCA) on Starknet. It enables groups of people to pool their money together and take turns receiving the collective sum, using USDC as the stablecoin.
+Ahjoor is a Cairo smart contract implementing a Rotating Savings and Credit Association (ROSCA) on Starknet. It enables groups of people to pool their money together and take turns receiving the collective sum, using STRK tokens for contributions and payouts.
 
 ## What is a ROSCA?
 
@@ -14,67 +14,54 @@ A Rotating Savings and Credit Association (ROSCA) is a group of individuals who 
 ## Features
 
 ### Core Functionality
-- **Group Creation**: Organizers can create ROSCA groups with customizable parameters
-- **Participant Management**: Users can join groups before they start
-- **Round-based Contributions**: Participants contribute USDC each round
+- **Group Creation**: Organizers can create ROSCA groups with predefined participant lists
+- **STRK Contributions**: Participants contribute STRK tokens each round
 - **Automated Payouts**: Recipients can claim their payout when it's their turn
-- **Emergency Withdrawals**: Organizers can terminate groups and refund participants
+- **Access Control**: Only pre-defined participants can contribute to groups
+- **Admin Controls**: Contract owner can pause/unpause operations
 
 ### Security Features
-- **USDC Integration**: Uses established stablecoin for reliable value transfer
+- **STRK Integration**: Uses STRK tokens for reliable value transfer
 - **Access Control**: Only authorized participants can interact with groups
 - **Time-based Rounds**: Automatic round progression based on duration
-- **Emergency Safeguards**: Organizer can halt operations if needed
+- **OpenZeppelin Standards**: Implements Ownable and Pausable patterns
 
 ## Contract Architecture
 
 ### Main Components
 
 1. **Group Management**
-   - `create_group()`: Create a new ROSCA group
-   - `join_group()`: Join an existing group
-   - `start_group()`: Begin the contribution rounds
+   - `create_group()`: Create a new ROSCA group with participant list
+   - `get_group_info()`: Get group details
+   - `get_group_count()`: Get total number of groups created
 
 2. **Contributions & Payouts**
-   - `contribute()`: Make USDC contribution for current round
+   - `contribute()`: Make STRK contribution for current round
    - `claim_payout()`: Claim payout when it's your turn
-   - `emergency_withdraw()`: Emergency group termination
 
 3. **View Functions**
-   - `get_group_info()`: Get group details
-   - `get_participant_info()`: Get participant status
-   - `get_current_recipient()`: See who receives payout this round
    - `is_participant()`: Check if address is in group
+
+4. **Admin Functions**
+   - `pause()` / `unpause()`: Emergency controls
+   - `transfer_ownership()`: Transfer contract ownership
 
 ### Data Structures
 
 #### GroupInfo
 ```cairo
 struct GroupInfo {
-    name: felt252,
+    name: ByteArray,
+    description: ByteArray,
     organizer: ContractAddress,
+    num_participants: u32,
     contribution_amount: u256,
-    max_participants: u32,
-    current_participants: u32,
     round_duration: u64,
+    num_participants_stored: u32,
     current_round: u32,
-    total_rounds: u32,
-    is_active: bool,
-    is_started: bool,
+    is_completed: bool,
     created_at: u64,
-    last_round_start: u64,
-}
-```
-
-#### ParticipantInfo
-```cairo
-struct ParticipantInfo {
-    address: ContractAddress,
-    join_timestamp: u64,
-    has_contributed_current_round: bool,
-    has_received_payout: bool,
-    payout_round: u32,
-    total_contributed: u256,
+    last_payout_time: u64,
 }
 ```
 
@@ -82,34 +69,27 @@ struct ParticipantInfo {
 
 ### 1. Group Creation
 ```cairo
+let participant_addresses = array![address1, address2, address3];
 let group_id = ahjoor.create_group(
-    'My Savings Group',    // Group name
-    1000_u256,            // 1000 USDC contribution per round
-    10_u32,               // Maximum 10 participants
-    604800_u64            // 7 days per round (in seconds)
+    "My Savings Group",           // Group name
+    "Monthly savings circle",     // Description
+    3_u32,                        // Number of participants
+    1000_u256,                    // 1000 STRK contribution per round
+    604800_u64,                   // 7 days per round (in seconds)
+    participant_addresses         // Pre-defined participant list
 );
 ```
 
-### 2. Joining Groups
+### 2. Contributing Each Round
 ```cairo
-ahjoor.join_group(group_id);
-```
-
-### 3. Starting the Group
-```cairo
-ahjoor.start_group(group_id);  // Only organizer can call this
-```
-
-### 4. Contributing Each Round
-```cairo
-// First approve USDC spending
-usdc.approve(ahjoor_contract_address, contribution_amount);
+// First approve STRK spending
+strk.approve(ahjoor_contract_address, contribution_amount);
 
 // Then contribute
 ahjoor.contribute(group_id);
 ```
 
-### 5. Claiming Payouts
+### 3. Claiming Payouts
 ```cairo
 ahjoor.claim_payout(group_id);  // Only current round recipient
 ```
@@ -118,25 +98,38 @@ ahjoor.claim_payout(group_id);  // Only current round recipient
 
 The contract emits events for all major actions:
 - `GroupCreated`: New group created
-- `ParticipantJoined`: User joined group
-- `GroupStarted`: Group began operations
 - `ContributionMade`: Participant made contribution
 - `PayoutClaimed`: Recipient claimed payout
-- `RoundAdvanced`: New round started with new recipient
+- `Paused` / `Unpaused`: Contract state changes
+- `OwnershipTransferred`: Owner changes
+- `Upgraded`: Contract upgrades
 
 ## Prerequisites
 
-- **USDC Token**: Contract requires USDC token address during deployment
+- **STRK Token**: Contract requires STRK token address during deployment
 - **Starknet Wallet**: Participants need Starknet-compatible wallets
-- **USDC Balance**: Participants must have sufficient USDC for contributions
-- **USDC Approval**: Participants must approve contract to spend USDC
+- **STRK Balance**: Participants must have sufficient STRK for contributions
+- **STRK Approval**: Participants must approve contract to spend STRK
 
 ## Deployment
 
-1. Deploy USDC token contract (or use existing)
-2. Deploy Ahjoor contract with USDC address:
+### Current Deployment (Sepolia Testnet)
+- **Contract Address**: `0x056f0d4f9a0ff9e0cfe8016d230806cd6c3fc3d6fd129875e27a7d50b43a123b`
+- **STRK Token Address**: `0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d`
+- **Owner Address**: `0x6943f2231202f4f6f52ff6f0e52e393544f94d7d7c6d0ac0c4bdc6fc6be6cc3`
+- **View on StarkScan**: [Contract](https://sepolia.starkscan.co/contract/0x056f0d4f9a0ff9e0cfe8016d230806cd6c3fc3d6fd129875e27a7d50b43a123b)
+
+### Deploy Your Own
+1. Build and deploy using the deployment script:
 ```bash
-starknet deploy --contract ahjoor --inputs <usdc_token_address>
+./deploy.sh
+```
+
+Or manually:
+```bash
+scarb build
+sncast declare --contract-name AhjoorROSCA
+sncast deploy --class-hash <class_hash> --constructor-calldata <strk_token_address> <owner_address>
 ```
 
 ## Testing
@@ -146,28 +139,52 @@ Run the comprehensive test suite:
 scarb test
 ```
 
-Tests cover:
-- Group creation and validation
-- Participant joining and management
-- Group starting requirements
-- Contribution mechanics
-- Payout distribution
-- Error conditions and edge cases
+### Test Results
+**All tests pass**: 11 passed, 0 failed, 0 skipped
+
+### Test Coverage
+✅ **Core Functionality**
+- Group creation with parameters validation
+- Access control (only pre-defined participants can contribute)
+- Multiple groups support
+- Group state management
+
+✅ **Security & Validation**
+- Input parameter validation (minimum participants, contribution amount, duration)
+- Organizer verification (must be in participant list)
+- Address count matching
+- Proper error handling for unauthorized access
+
+✅ **Contract Logic** 
+- Group completion state tracking
+- Round progression logic
+- Participant identification
+- Independent group state management
+
+### Test Framework Features
+- **Mock Contracts**: MockSTRK for testing token interactions
+- **Cairo 1 Testing**: Uses `snforge_std` for advanced testing capabilities
+- **Time Manipulation**: Block timestamp and caller address testing
+- **Error Testing**: Comprehensive `#[should_panic]` validation
+
+*Note: Some advanced tests requiring full ERC-20 token interaction cycles are documented in TEST_SUMMARY.md but not implemented due to test environment complexity.*
 
 ## Security Considerations
 
 ### Implemented Safeguards
-- Input validation on all parameters
-- Access control for sensitive operations
-- Overflow protection with u256 amounts
-- Emergency withdrawal mechanism
-- Time-based round progression
+- **Input Validation**: All parameters validated (minimum participants, contribution amounts, round duration)
+- **Access Control**: Only pre-defined participants can contribute to groups
+- **Ownership Pattern**: OpenZeppelin Ownable implementation for admin functions
+- **Pausable Contract**: Owner can pause operations in emergencies
+- **Overflow Protection**: Uses u256 for amounts and proper arithmetic
+- **Time-based Rounds**: Enforced minimum round duration (24 hours)
 
 ### Potential Risks
-- **Organizer Trust**: Organizers have emergency withdrawal power
-- **Participant Commitment**: No enforcement if participants stop contributing
-- **USDC Dependency**: Relies on USDC token contract security
-- **Round Timing**: Automatic progression may not suit all groups
+- **Participant Commitment**: No enforcement if participants stop contributing mid-cycle
+- **STRK Dependency**: Relies on STRK token contract security and availability
+- **Centralized Pause**: Contract owner can pause all operations
+- **Round Timing**: Fixed round duration may not suit all group preferences
+- **No Partial Refunds**: If group fails, there's no built-in refund mechanism
 
 ## Development
 

@@ -16,16 +16,16 @@ fn setup_addresses() -> (ContractAddress, ContractAddress, ContractAddress, Cont
 }
 
 fn deploy_contracts() -> (IAhjoorROSCADispatcher, ContractAddress) {
-    // Deploy mock USDC from existing test file
-    let usdc_class = declare("MockUSDC").unwrap().contract_class();
-    let (usdc_address, _) = usdc_class.deploy(@array![]).unwrap();
+    // Deploy mock STARK from existing test file
+    let strk_class = declare("MockSTRK").unwrap().contract_class();
+    let (strk_address, _) = strk_class.deploy(@array![]).unwrap();
     
     // Deploy Ahjoor ROSCA with owner parameter (using organizer as owner for simplicity)
     let owner: ContractAddress = 0x999.try_into().unwrap();
     let ahjoor_class = declare("AhjoorROSCA").unwrap().contract_class();
-    let (ahjoor_address, _) = ahjoor_class.deploy(@array![usdc_address.into(), owner.into()]).unwrap();
+    let (ahjoor_address, _) = ahjoor_class.deploy(@array![strk_address.into(), owner.into()]).unwrap();
     
-    (IAhjoorROSCADispatcher { contract_address: ahjoor_address }, usdc_address)
+    (IAhjoorROSCADispatcher { contract_address: ahjoor_address }, strk_address)
 }
 
 // Test 1: Group creation with parameters

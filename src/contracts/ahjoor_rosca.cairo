@@ -18,7 +18,7 @@ pub mod AhjoorROSCA {
         paused: bool,
         
         // ROSCA specific storage
-        usdc_token: ContractAddress,
+        strk_token: ContractAddress,
         group_counter: u256,
         groups: Map<u256, GroupInfo>,
         participant_addresses: Map<(u256, u32), ContractAddress>,
@@ -39,8 +39,8 @@ pub mod AhjoorROSCA {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, usdc_token_address: ContractAddress, owner: ContractAddress) {
-        self.usdc_token.write(usdc_token_address);
+    fn constructor(ref self: ContractState, strk_token_address: ContractAddress, owner: ContractAddress) {
+        self.strk_token.write(strk_token_address);
         self.group_counter.write(0);
         self.owner.write(owner);
         self.paused.write(false);
@@ -122,7 +122,7 @@ pub mod AhjoorROSCA {
                 num_participants,
                 contribution_amount,
                 round_duration,
-                num_participants_stored: num_participants,
+                num_participants_stored: participant_addresses.len(),
                 current_round: 1,
                 is_completed: false,
                 created_at: current_time,
@@ -160,11 +160,11 @@ pub mod AhjoorROSCA {
             let has_contributed = self.contributions.read((group_id, caller, group.current_round));
             assert(!has_contributed, 'Already contributed this round');
             
-            // Transfer USDC from participant to contract
-            let usdc_address = self.usdc_token.read();
-            let usdc = IERC20Dispatcher { contract_address: usdc_address };
-            let success = usdc.transfer_from(caller, get_contract_address(), group.contribution_amount);
-            assert(success, 'USDC transfer failed');
+            // Transfer STARK from participant to contract
+            let strk_address = self.strk_token.read();
+            let strk = IERC20Dispatcher { contract_address: strk_address };
+            let success = strk.transfer_from(caller, get_contract_address(), group.contribution_amount);
+            assert(success, 'STARK transfer failed');
             
             // Mark contribution
             self.contributions.write((group_id, caller, group.current_round), true);
@@ -210,10 +210,10 @@ pub mod AhjoorROSCA {
             
             // Transfer payout
             let payout_amount = group.contribution_amount * group.num_participants.into();
-            let usdc_address = self.usdc_token.read();
-            let usdc = IERC20Dispatcher { contract_address: usdc_address };
-            let success = usdc.transfer(caller, payout_amount);
-            assert(success, 'USDC payout failed');
+            let strk_address = self.strk_token.read();
+            let strk = IERC20Dispatcher { contract_address: strk_address };
+            let success = strk.transfer(caller, payout_amount);
+            assert(success, 'STARK payout failed');
             
             // Update pool
             self.total_pool.write(group_id, current_pool - payout_amount);
@@ -247,11 +247,16 @@ pub mod AhjoorROSCA {
             self.groups.read(group_id)
         }
 
+        fn get_group_count(self: @ContractState) -> u256 {
+            self.group_counter.read()
+        }
+
         fn is_participant(self: @ContractState, group_id: u256, address: ContractAddress) -> bool {
             let group = self.groups.read(group_id);
             let mut i = 0;
-            while i < group.num_participants {
-                if self.participant_addresses.read((group_id, i)) == address {
+            while i < group.num_participants_stored {
+                let stored_participant = self.participant_addresses.read((group_id, i));
+                if stored_participant == address {
                     return true;
                 }
                 i += 1;
@@ -259,38 +264,23 @@ pub mod AhjoorROSCA {
             false
         }
 
-        fn get_group_count(self: @ContractState) -> u256 {
-            self.group_counter.read()
-        }
-        
-        // Admin functions (OpenZeppelin style)
+        // Admin functions
         fn pause(ref self: ContractState) {
             self.assert_only_owner();
-            self.assert_not_paused();
             self.paused.write(true);
-            
-            self.emit(Paused {
-                account: get_caller_address(),
-            });
+            self.emit(Paused { account: get_caller_address() });
         }
 
         fn unpause(ref self: ContractState) {
             self.assert_only_owner();
-            self.assert_paused();
             self.paused.write(false);
-            
-            self.emit(Unpaused {
-                account: get_caller_address(),
-            });
+            self.emit(Unpaused { account: get_caller_address() });
         }
 
         fn transfer_ownership(ref self: ContractState, new_owner: ContractAddress) {
             self.assert_only_owner();
-            assert(!new_owner.is_zero(), 'Ownable: new owner is zero');
-            
             let previous_owner = self.owner.read();
             self.owner.write(new_owner);
-            
             self.emit(OwnershipTransferred {
                 previous_owner,
                 new_owner,
@@ -299,10 +289,8 @@ pub mod AhjoorROSCA {
 
         fn renounce_ownership(ref self: ContractState) {
             self.assert_only_owner();
-            
             let previous_owner = self.owner.read();
             self.owner.write(Zero::zero());
-            
             self.emit(OwnershipTransferred {
                 previous_owner,
                 new_owner: Zero::zero(),
@@ -311,14 +299,9 @@ pub mod AhjoorROSCA {
 
         fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
             self.assert_only_owner();
-            // Note: Actual upgrade implementation would use replace_class_syscall
-            // This is a placeholder for access control testing
-            
-            self.emit(Upgraded {
-                new_class_hash,
-            });
+            self.emit(Upgraded { new_class_hash });
         }
-        
+
         // View functions
         fn is_paused(self: @ContractState) -> bool {
             self.paused.read()

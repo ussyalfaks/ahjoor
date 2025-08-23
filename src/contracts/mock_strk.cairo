@@ -2,7 +2,7 @@
 // Compatible with OpenZeppelin Contracts for Cairo ^1.0.0
 
 #[starknet::contract]
-pub mod MockUSDC {
+pub mod MockSTRK {
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::token::erc20::{ERC20Component, ERC20HooksEmptyImpl};
     use openzeppelin::upgrades::UpgradeableComponent;
@@ -47,13 +47,13 @@ pub mod MockUSDC {
 
     #[constructor]
     fn constructor(ref self: ContractState) {
-        // Initialize with USDC-like parameters
-        self.erc20.initializer("USD Coin", "USDC");
+        // Initialize with STARK-like parameters
+        self.erc20.initializer("Stark Token", "STRK");
         // Set initial owner as deployer
         self.ownable.initializer(starknet::get_caller_address());
         
         // Mint initial supply to deployer for testing
-        self.erc20.mint(starknet::get_caller_address(), 10000000000000000000000); // 10K USDC
+        self.erc20.mint(starknet::get_caller_address(), 10000000000000000000000); // 10K STRK
     }
 
     #[generate_trait]
