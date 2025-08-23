@@ -231,7 +231,3 @@ This project is licensed under the MIT License.
 - **Credit Scoring**: Build on-chain credit history
 - **Cross-chain**: Bridge to other blockchain networks
 - **Traditional Banking**: Fiat on/off ramps
-
-## Support
-
-For questions, issues, or contributions, please open an issue on the GitHub repository or contact the development team.
