@@ -114,10 +114,8 @@ The contract emits events for all major actions:
 ## Deployment
 
 ### Current Deployment (Sepolia Testnet)
-- **Contract Address**: `0x056f0d4f9a0ff9e0cfe8016d230806cd6c3fc3d6fd129875e27a7d50b43a123b`
-- **STRK Token Address**: `0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d`
-- **Owner Address**: `0x6943f2231202f4f6f52ff6f0e52e393544f94d7d7c6d0ac0c4bdc6fc6be6cc3`
-- **View on StarkScan**: [Contract](https://sepolia.starkscan.co/contract/0x056f0d4f9a0ff9e0cfe8016d230806cd6c3fc3d6fd129875e27a7d50b43a123b)
+- **Contract Address**: `0x0794fb034e45f9a538ea4dfbbc93378fe49e32542ad55425de69832ec905c853`
+- **View on StarkScan**: [Contract](https://sepolia.starkscan.co/contract/0x0794fb034e45f9a538ea4dfbbc93378fe49e32542ad55425de69832ec905c853)
 
 ### Deploy Your Own
 1. Build and deploy using the deployment script:
